@@ -448,6 +448,13 @@
     }
     // Zufälliger Betrag in Rappen, in Schritten (z. B. 5 Rp. oder 10 Rp.)
     function betrag(minRp, maxRp, schrittRp) { return schrittRp * zz(Math.ceil(minRp / schrittRp), Math.floor(maxRp / schrittRp)); }
+    // Beträge wie im Schulbuch: meist Rappen in 10er-Schritten (oft .90, z. B. 17.90),
+    // ab und zu krumme Rappen wie 6.85 oder 249.95, und ungerade Franken (57, 69, 119 …)
+    function buchRappen(mit5) {
+      if (mit5 && Math.random() < 0.25) return zufall([95, 95, 85, 85, 45, 65, 15, 35, 55, 75, 5, 25]);
+      return zufall([90, 90, 90, 20, 20, 10, 30, 30, 60, 80, 50, 40, 70]);
+    }
+    function buchBetrag(minFr, maxFr, mit5) { return zz(minFr, maxFr) * 100 + buchRappen(mit5); }
     function summe(liste) { return liste.reduce(function (a, b) { return a + b; }, 0); }
 
     // Schreibweise wie im Schulbuch: 420 → "4.20", 2500 → "25"
@@ -591,10 +598,9 @@
       // ---------- 101B/104: Beträge mit möglichst wenig Noten und Münzen legen ----------
       legen: function (s) {
         let ziel;
-        if (s === 1)      ziel = betrag(110, 990, 10);          // 6.30, 9.80
-        else if (s === 2) ziel = betrag(1005, 9995, 5);         // 6.85, 43.60, 69.90
-        else              ziel = betrag(10005, 39995, 5);       // 249.95
-        if (ziel % 100 === 0) ziel += 50;
+        if (s === 1)      ziel = buchBetrag(1, 9, true);        // 6.30, 6.85, 9.80
+        else if (s === 2) ziel = buchBetrag(10, 99, true);      // 43.60, 69.90
+        else              ziel = buchBetrag(100, 399, true);    // 249.95
         return { legen: true, loesung: ziel, text: "Lege " + fr(ziel) + " mit möglichst wenig Noten und Münzen." };
       },
 
@@ -602,9 +608,8 @@
       rueckgeld: function (s) {
         let preis;
         if (s === 1) preis = zz(2, 95) * 100;                    // 11 Fr., 50 Fr.
-        else if (s === 2) preis = betrag(110, 6990, 10);         // 5.20, 17.90, 57.90
-        else preis = betrag(105, 9995, 5);                       // 34.65
-        if (s > 1 && preis % 100 === 0) preis += 40;
+        else if (s === 2) preis = buchBetrag(1, 69, false);      // 5.20, 17.90, 57.90
+        else preis = buchBetrag(1, 99, true);                    // 34.65, 27.95
         const note = noteZumBezahlen(preis, [500, 1000, 2000, 5000, 10000]);
         return {
           bild: '<div class="reihe-mitte"><div><div class="zwischentitel">Preis</div><span class="preis gross">' + schild(preis) +
@@ -711,8 +716,10 @@
       const stueck = betrag(30, 100, 10);
       const n = zufall([4, 5, 6, 10, 20]);
       const einzeln = stueck * n;
-      let packung = einzeln + zufall([-1, 1]) * betrag(10, Math.min(150, Math.floor(einzeln / 3)), 5);
-      if (packung === einzeln) packung -= 5;
+      // Packungspreise wie im Buch mit .95 (10.95 Fr., 2.95 Fr.)
+      let packung = einzeln + zufall([-1, 1]) * betrag(10, Math.min(150, Math.floor(einzeln / 3)), 10);
+      packung = Math.max(95, Math.floor(packung / 100) * 100 + zufall([95, 95, 45, 50, 90]));
+      if (packung === einzeln) packung -= 10;
       const guenstig = packung < einzeln ? "📦 Die Packung" : "✏️ Einzeln kaufen";
       return {
         bild: '<div class="laden">' +
