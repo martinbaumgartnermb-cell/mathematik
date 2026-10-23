@@ -216,6 +216,17 @@
     }
     .note small { font-size: 13px; font-weight: normal; }
 
+    .muenze-bild { display: inline-block; border-radius: 50%; flex: none; background-position: left center; background-repeat: no-repeat;
+                   box-shadow: 0 3px 4px rgba(0,0,0,0.25); background-color: #ddd; }
+    .note-bild { flex: none; border-radius: 4px; box-shadow: 0 3px 5px rgba(0,0,0,0.25); display: block; }
+    .note-dreh { flex: none; position: relative; overflow: hidden; border-radius: 4px; box-shadow: 0 3px 5px rgba(0,0,0,0.25); }
+    .muenze-bild.online { position: relative; overflow: hidden; display: inline-flex; justify-content: center; align-items: center;
+                          font-weight: bold; color: #555; }
+    .muenze-bild.online img { position: absolute; left: 0; top: 0; max-width: none; }
+    .note-dreh { display: flex; justify-content: center; align-items: center; background: #f2d36b; font-weight: bold; color: #6b5300; }
+    .note-dreh img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
+    .ablage img, .kasse img { -webkit-user-drag: none; }
+
     /* Beträge legen */
     .ziel { font-size: 22px; margin: 4px 0; }
     .ziel b { font-size: 34px; color: #e85d04; }
@@ -478,35 +489,48 @@
 
 
     // ================= GELD ZEICHNEN =================
-    // Schweizer Münzen und Noten (Werte in Rappen) – vereinfacht gezeichnet
+    // Offizielle Bilder der Schweizer Münzen und Noten (Wikimedia Commons, SNB-Musterbilder "SPECIMEN").
+    // Liegt ein Bild im Ordner "bilder", nimmt die App dieses. Sonst lädt sie es direkt von Wikimedia.
+    const WM = "https://upload.wikimedia.org/wikipedia/commons/";
+    // groesse in Pixeln, im gleichen Verhältnis wie die echten Münzen (5 Fr. = 31 mm)
     const MUENZEN = {
-      5:   { text: "5",  einheit: "Rp.", groesse: 44, messing: true },
-      10:  { text: "10", einheit: "Rp.", groesse: 50 },
-      20:  { text: "20", einheit: "Rp.", groesse: 56 },
-      50:  { text: "½",  einheit: "Fr.", groesse: 42 },
-      100: { text: "1",  einheit: "Fr.", groesse: 58 },
-      200: { text: "2",  einheit: "Fr.", groesse: 66 },
-      500: { text: "5",  einheit: "Fr.", groesse: 74 }
+      5:   { text: "5 Rp.",  groesse: 42, bild: "bilder/muenze-5.png" },
+      10:  { text: "10 Rp.", groesse: 46, online: WM + "8/83/CH_CHF0.1.png" },
+      20:  { text: "20 Rp.", groesse: 50, online: WM + "e/e9/CH_CHF0.2.png" },
+      50:  { text: "½ Fr.",  groesse: 44, online: WM + "e/e1/CH_CHF0.5.png" },
+      100: { text: "1 Fr.",  groesse: 56, bild: "bilder/muenze-100.png" },
+      200: { text: "2 Fr.",  groesse: 66, bild: "bilder/muenze-200.png" },
+      500: { text: "5 Fr.",  groesse: 76, online: WM + "8/8d/CH_CHF5.png", breiteBild: 597, hoeheBild: 330 }
     };
+    // breite in Pixeln, im gleichen Verhältnis wie die echten Noten
     const NOTEN = {
-      1000:   { text: "10",   farbe: "#e9b400", breite: 96 },
-      2000:   { text: "20",   farbe: "#e0603a", breite: 100 },
-      5000:   { text: "50",   farbe: "#4caf50", breite: 106 },
-      10000:  { text: "100",  farbe: "#3a8fc4", breite: 112 },
-      20000:  { text: "200",  farbe: "#a0663a", breite: 118 },
-      100000: { text: "1000", farbe: "#7b4fb5", breite: 126 }
+      1000:   { text: "10 Fr.",   breite: 108, online: WM + "0/07/CHF_10_9_front.jpg" },
+      2000:   { text: "20 Fr.",   breite: 116, bild: "bilder/note-20.jpg" },
+      5000:   { text: "50 Fr.",   breite: 124, bild: "bilder/note-50.jpg" },
+      10000:  { text: "100 Fr.",  breite: 132, bild: "bilder/note-100.jpg" },
+      20000:  { text: "200 Fr.",  breite: 140, bild: "bilder/note-200.jpg" },
+      100000: { text: "1000 Fr.", breite: 148, bild: "bilder/note-1000.jpg" }
     };
     const ALLE_WERTE = [100000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5];
 
     function stueckHTML(w, nr) {
-      const extra = nr === undefined ? "" : ' data-nr="' + nr + '"';
+      const extra = (nr === undefined ? "" : ' data-nr="' + nr + '"');
       if (NOTEN[w]) {
         const n = NOTEN[w];
-        return '<div class="note"' + extra + ' style="background:' + n.farbe + ';width:' + n.breite + 'px">' + n.text + '<small>Fr.</small></div>';
+        if (n.bild) return '<img class="note-bild"' + extra + ' src="' + n.bild + '" alt="' + n.text + '" style="width:' + n.breite + 'px">';
+        // Online-Bild steht hochkant: in einer Box quer drehen (Seitenverhältnis 345 × 714)
+        const h = Math.round(n.breite * 345 / 714);
+        return '<div class="note-dreh"' + extra + ' style="width:' + n.breite + 'px;height:' + h + 'px">' +
+               '<span>' + n.text + '</span><img src="' + n.online + '" alt="" onerror="this.remove()" style="width:' + h + 'px;height:' + n.breite + 'px"></div>';
       }
       const m = MUENZEN[w];
-      return '<div class="muenze' + (m.messing ? " messing" : "") + '"' + extra + ' style="width:' + m.groesse + 'px;height:' + m.groesse +
-             'px;font-size:' + Math.round(m.groesse * 0.38) + 'px">' + m.text + '<small>' + m.einheit + '</small></div>';
+      if (m.bild) return '<img class="muenze-bild"' + extra + ' src="' + m.bild + '" alt="' + m.text + '" style="width:' + m.groesse + 'px;height:' + m.groesse + 'px">';
+      // Online-Bild zeigt beide Seiten nebeneinander: nur die linke (Wert-)Seite anzeigen.
+      // Lädt das Bild nicht (kein Internet), steht der Wert als Text auf der Münze.
+      const bw = m.breiteBild || 408, bh = m.hoeheBild || 212;
+      return '<div class="muenze-bild online"' + extra + ' style="width:' + m.groesse + 'px;height:' + m.groesse + 'px;font-size:' +
+             Math.round(m.groesse * 0.26) + 'px"><span>' + m.text + '</span><img src="' + m.online + '" alt="" onerror="this.remove()" style="height:' +
+             m.groesse + 'px;width:' + Math.round(m.groesse * bw / bh) + 'px"></div>';
     }
 
     function geldHTML(stuecke, sortieren) {
